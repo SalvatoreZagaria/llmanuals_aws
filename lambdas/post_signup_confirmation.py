@@ -19,11 +19,5 @@ def lambda_handler(event, context):
             }
         )
     )
-    event.setdefault('response', {})
-    event['response'].update({
-        'statusCode': 202,
-        'message': 'Preparing the agent',
-        'statusLocation': '/api/admin/agent/status'
-    })
 
     return event
