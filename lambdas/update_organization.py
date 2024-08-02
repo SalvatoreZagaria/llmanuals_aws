@@ -28,8 +28,8 @@ def lambda_handler(event, context):
     org_name = event['body']['organization_name']
     org_description = event['body']['organization_description']
 
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('user')
+    dynamodb_client = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
+    table = dynamodb_client.Table('user')
     response = table.get_item(
         Key={
             'id': user_id

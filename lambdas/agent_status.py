@@ -36,7 +36,7 @@ def lambda_handler(event, context):
         )
     except bedrock_client.exceptions.ResourceNotFoundException:
         return {
-            'statusCode': 404,
+            'statusCode': 500,
             'message': 'Agent not found. Please contact the administrator.'
         }
 

@@ -63,7 +63,7 @@ def lambda_handler(event, context):
     logger.info(f'Done in {time.time() - start}')
 
     logger.info('Storing info in DynamoDB...')
-    dynamodb_client = boto3.client('dynamodb')
+    dynamodb_client = boto3.client('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
     dynamodb_client.put_item(
         TableName='user',
         Item={
