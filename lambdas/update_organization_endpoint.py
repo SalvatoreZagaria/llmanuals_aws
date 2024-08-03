@@ -55,7 +55,7 @@ def lambda_handler(event, context):
             'body': status_response['body']
         }
     status_body = json.loads(status_response['body'])
-    if not status_body['isAgentReady']:
+    if not status_body['agent']['isAgentReady']:
         return {
             'statusCode': 423,
             'body': json.dumps({
@@ -63,7 +63,7 @@ def lambda_handler(event, context):
                 'statusLocation': '/api/admin/agent/status'
             })
         }
-    if status_body['agentError']:
+    if status_body['agent']['agentError']:
         return {
             'statusCode': 500,
             'body': json.dumps({

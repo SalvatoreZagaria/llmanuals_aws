@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 import logging
 
 import boto3
@@ -44,6 +45,46 @@ def lambda_handler(event, context):
     wait_for_agent_operation(agent_id, 'CREATING')
     logger.info(f'Done in {time.time() - start}')
 
+    logger.info('Creating knowledge base...')
+    start = time.time()
+
+    response = bedrock_client.create_knowledge_base(
+        clientToken=user_id,
+        name=f'{user_id}_kb',
+        roleArn=os.getenv(
+            'KB_ROLE', 'arn:aws:iam::851725385545:role/service-role/AmazonBedrockExecutionRoleForKnowledgeBase_kzka2'),
+        knowledgeBaseConfiguration={
+            'type': 'VECTOR',
+            'vectorKnowledgeBaseConfiguration': {
+                'embeddingModelArn': 'arn:aws:bedrock:your-region::foundation-model/amazon.titan-embed-text-v2:0'
+            }
+        },
+        storageConfiguration={
+            'type': 'OPENSEARCH_SERVERLESS',
+            'opensearchServerlessConfiguration': {
+                'collectionArn': os.getenv('OPENSEARCH_COLLECTION',
+                                           'arn:aws:aoss:eu-west-2:851725385545:collection/7hrexorqfu3dxh7lndzj'),
+                'vectorIndexName': 'bedrock-knowledge-base-default-index',
+                'fieldMapping': {
+                    'vectorField': 'bedrock-knowledge-base-default-vector',
+                    'textField': 'AMAZON_BEDROCK_TEXT_CHUNK',
+                    'metadataField': 'AMAZON_BEDROCK_METADATA'
+                }
+            }
+        }
+    )
+    kb_id = response['knowledgeBase']['knowledgeBaseId']
+    wait_for_knowledge_operation(kb_id)
+    logger.info(f'Done in {time.time() - start}')
+
+    bedrock_client.associate_agent_knowledge_base(
+        agentId=agent_id,
+        agentVersion='DRAFT',
+        description=f"{user_id}'s KB",
+        knowledgeBaseId=kb_id,
+        knowledgeBaseState='DISABLED'
+    )
+
     logger.info('Preparing agent...')
     start = time.time()
     bedrock_client.prepare_agent(
@@ -55,10 +96,11 @@ def lambda_handler(event, context):
     logger.info('Creating agent alias...')
     start = time.time()
     response = bedrock_client.create_agent_alias(
-        agentAliasName=agent_id,
+        agentAliasName=str(uuid.uuid4()),
         agentId=agent_id
     )
     alias_id = response['agentAlias']['agentAliasId']
+    agent_version = '1'
     wait_for_alias_operation(agent_id, alias_id)
     logger.info(f'Done in {time.time() - start}')
 
@@ -71,9 +113,11 @@ def lambda_handler(event, context):
             'organization_name': {'S': org_name},
             'organization_description': {'S': ''},
             'agent_id': {'S': agent_id},
+            'agent_version': {'S': agent_version},
             'alias_id': {'S': alias_id},
-            'knowledge_base_id_s3': {'S': ''},
-            'knowledge_base_id_web_crawler': {'S': ''},
+            'knowledge_base': {'S': kb_id},
+            'data_source_s3': {'S': ''},
+            'data_source_web_crawler': {'S': ''},
         }
     )
 
@@ -112,4 +156,22 @@ def wait_for_alias_operation(agent_id: str, alias_id: str):
             continue
         if alias_status == 'FAILED':
             raise AgentPreparationFailed(f"Agent alias failed - AGENT ID: {agent_id}; ALIAS ID: {alias_id}")
+        return
+
+
+def get_kb_status(kb_id: str):
+    response = bedrock_client.get_knowledge_base(
+        knowledgeBaseId=kb_id
+    )
+    return response['knowledgeBase']['status']
+
+
+def wait_for_knowledge_operation(kb_id: str):
+    while True:
+        kb_status = get_kb_status(kb_id)
+        if kb_status == 'CREATING':
+            time.sleep(1)
+            continue
+        if kb_status == 'FAILED':
+            raise AgentPreparationFailed(f"Knowledge base failed - KB ID: {kb_id}")
         return

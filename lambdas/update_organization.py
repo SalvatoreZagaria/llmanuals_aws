@@ -78,6 +78,7 @@ def lambda_handler(event, context):
         agentId=agent_id
     )
     alias_id = response['agentAlias']['agentAliasId']
+    agent_version = str(int(user_data['agent_version']) + 1)
     wait_for_alias_operation(agent_id, alias_id)
     logger.info(f'Done in {time.time() - start}')
 
@@ -85,9 +86,9 @@ def lambda_handler(event, context):
         Key={
             'id': user_id
         },
-        UpdateExpression="SET organization_name = :org_name, organization_description = :descr, alias_id = :al_id",
+        UpdateExpression="SET organization_name = :org_name, organization_description = :descr, alias_id = :al_id, agent_version = :agent_v",
         ExpressionAttributeValues={
-            ':org_name': new_org_name, ':descr': new_description, ':al_id': alias_id
+            ':org_name': new_org_name, ':descr': new_description, ':al_id': alias_id, ':agent_v': agent_version
         }
     )
 
