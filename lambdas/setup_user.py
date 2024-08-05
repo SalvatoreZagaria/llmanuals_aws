@@ -94,7 +94,7 @@ def create_knowledge_base(user_id, agent_id):
         knowledgeBaseConfiguration={
             'type': 'VECTOR',
             'vectorKnowledgeBaseConfiguration': {
-                'embeddingModelArn': 'arn:aws:bedrock:your-region::foundation-model/amazon.titan-embed-text-v2:0'
+                'embeddingModelArn': 'arn:aws:bedrock:eu-west-2::foundation-model/amazon.titan-embed-text-v2:0'
             }
         },
         storageConfiguration={
