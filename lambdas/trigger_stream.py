@@ -21,7 +21,8 @@ def lambda_handler(event, context):
         return {'statusCode': 400}
     try:
         body = json.loads(body)
-        stream_id = body.get('streamId') or None
+        stream_id = body.get('streamId')
+        stream_id = str(stream_id) if stream_id else None
         prompt = body['prompt']
         assert prompt and isinstance(prompt, str)
     except (KeyError, AssertionError):
@@ -36,7 +37,7 @@ def lambda_handler(event, context):
                 'connection_id': connection_id
             }
         )
-        user_attributes = response['Item']['user_attributes']
+        user_attributes = {key: value['S'] for key, value in response['Item']['user_attributes'].items()}
     except:
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,
