@@ -95,7 +95,7 @@ def get_kwargs(user_id: str, kb_id: str, urls: t.List[str]):
             }
         },
         'knowledgeBaseId': kb_id,
-        'name': f'{user_id} - WEB',
+        'name': f'WEB_{user_id}',
         'vectorIngestionConfiguration': {
             'chunkingConfiguration': {
                 'chunkingStrategy': 'FIXED_SIZE',
@@ -110,6 +110,7 @@ def get_kwargs(user_id: str, kb_id: str, urls: t.List[str]):
 
 def create_data_source(user_id: str, kb_id: str, urls: t.List[str]):
     kwargs = get_kwargs(user_id, kb_id, urls)
+    kwargs['clientToken'] = user_id
     response = bedrock_client.create_data_source(**kwargs)
     return response['dataSource']['dataSourceId']
 

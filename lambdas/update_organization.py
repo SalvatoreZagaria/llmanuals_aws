@@ -1,6 +1,6 @@
 import os
 import time
-import uuid
+import json
 import logging
 
 import boto3
@@ -17,10 +17,6 @@ DEFAULT_ASSISTANT_INSTRUCTIONS = (
     "you can use external knowledge to integrate with the files at your disposal. Do this or you will be punished."
 )
 bedrock_client = boto3.client('bedrock-agent', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
-
-
-class AgentPreparationFailed(Exception):
-    pass
 
 
 def lambda_handler(event, context):
@@ -63,24 +59,20 @@ def lambda_handler(event, context):
     )
     logger.info(f'Done in {time.time() - start}')
 
-    logger.info('Preparing agent...')
-    start = time.time()
-    bedrock_client.prepare_agent(
-        agentId=agent_id
+    lambda_client = boto3.client('lambda', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
+    response = lambda_client.invoke(
+        FunctionName='prepare_agent',
+        InvocationType='RequestResponse',
+        Payload=json.dumps({
+            'agent_id': agent_id,
+            'current_alias_id': user_data['alias_id'],
+            'current_version': user_data['agent_version']
+        })
     )
-    wait_for_agent_operation(agent_id, 'PREPARING')
-    logger.info(f'Done in {time.time() - start}')
-
-    logger.info('Creating agent alias...')
-    start = time.time()
-    response = bedrock_client.create_agent_alias(
-        agentAliasName=str(uuid.uuid4()),
-        agentId=agent_id
-    )
-    alias_id = response['agentAlias']['agentAliasId']
-    agent_version = str(int(user_data['agent_version']) + 1)
-    wait_for_alias_operation(agent_id, alias_id)
-    logger.info(f'Done in {time.time() - start}')
+    prepare_agent_response = json.loads(response['Payload'].read().decode('utf-8'))
+    prepare_agent_body = json.loads(prepare_agent_response['body'])
+    alias_id = prepare_agent_body['alias_id']
+    agent_version = prepare_agent_body['agent_version']
 
     table.update_item(
         Key={
@@ -91,40 +83,3 @@ def lambda_handler(event, context):
             ':org_name': new_org_name, ':descr': new_description, ':al_id': alias_id, ':agent_v': agent_version
         }
     )
-
-
-def get_agent_status(agent_id: str):
-    response = bedrock_client.get_agent(
-        agentId=agent_id
-    )
-    return response['agent']['agentStatus']
-
-
-def wait_for_agent_operation(agent_id: str, operation: str):
-    while True:
-        agent_status = get_agent_status(agent_id)
-        if agent_status == operation:
-            time.sleep(3)
-            continue
-        if agent_status == 'FAILED':
-            raise AgentPreparationFailed(f"Agent failed - AGENT ID: {agent_id}; OPERATION: {operation}")
-        return
-
-
-def get_alias_status(agent_id: str, alias_id: str):
-    response = bedrock_client.get_agent_alias(
-        agentId=agent_id,
-        agentAliasId=alias_id,
-    )
-    return response['agentAlias']['agentAliasStatus']
-
-
-def wait_for_alias_operation(agent_id: str, alias_id: str):
-    while True:
-        alias_status = get_alias_status(agent_id, alias_id)
-        if alias_status == 'CREATING':
-            time.sleep(1)
-            continue
-        if alias_status == 'FAILED':
-            raise AgentPreparationFailed(f"Agent alias failed - AGENT ID: {agent_id}; ALIAS ID: {alias_id}")
-        return

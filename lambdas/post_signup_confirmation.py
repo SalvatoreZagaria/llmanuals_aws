@@ -8,7 +8,7 @@ def lambda_handler(event, context):
     user_attributes = event['request']['userAttributes']
     client = boto3.client('lambda', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
     client.invoke(
-        FunctionName='prepare_agent',
+        FunctionName='setup_user',
         InvocationType='Event',
         Payload=json.dumps(
             {
