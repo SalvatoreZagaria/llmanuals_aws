@@ -71,7 +71,7 @@ def lambda_handler(event, context):
                     'references': [
                         {
                             'text': r['content']['text'],
-                            'link': _transform_ref_link(r['location']['s3Location']['uri']) if r['location']['type'] == 'S3' else None     # TODO handle web crawler
+                            'link': _transform_ref_link(r['location']['s3Location']['uri'])
                         }
                         for r in (citation.get('retrievedReferences') or [])
                     ],

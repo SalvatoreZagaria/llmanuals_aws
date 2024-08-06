@@ -80,13 +80,9 @@ def lambda_handler(event, context):
 
 def get_kwargs(user_id: str, kb_id: str, urls: t.List[str]):
     return {
-        'dataDeletionPolicy': 'DELETE',
         'dataSourceConfiguration': {
             'type': 'WEB',
             'webConfiguration': {
-                'crawlerConfiguration': {
-                    'scope': 'HOST_ONLY'
-                },
                 'sourceConfiguration': {
                     'urlConfiguration': {
                         'seedUrls': [{'url': u} for u in urls]
