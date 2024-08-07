@@ -43,7 +43,7 @@ def lambda_handler(event, context):
 
     logger.info('Storing info in DynamoDB...')
     dynamodb_client = boto3.client('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
-    dynamodb_client.put_item(
+    dynamodb_client.put_item(       # TODO might want to create this first and then update it?
         TableName='user',
         Item={
             'id': {'S': user_id},
@@ -90,7 +90,7 @@ def create_knowledge_base(user_id, agent_id):
         clientToken=user_id,
         name=f'{user_id}_kb',
         roleArn=os.getenv(
-            'KB_ROLE', 'arn:aws:iam::851725385545:role/service-role/AmazonBedrockExecutionRoleForKnowledgeBase_kzka2'),
+            'KB_ROLE', 'arn:aws:iam::851725385545:role/service-role/AmazonBedrockExecutionRoleForKnowledgeBase_k7n89'),
         knowledgeBaseConfiguration={
             'type': 'VECTOR',
             'vectorKnowledgeBaseConfiguration': {
@@ -98,18 +98,21 @@ def create_knowledge_base(user_id, agent_id):
             }
         },
         storageConfiguration={
-            'type': 'OPENSEARCH_SERVERLESS',
-            'opensearchServerlessConfiguration': {
-                'collectionArn': os.getenv('OPENSEARCH_COLLECTION',
-                                           'arn:aws:aoss:eu-west-2:851725385545:collection/7hrexorqfu3dxh7lndzj'),
-                'vectorIndexName': 'bedrock-knowledge-base-default-index',
-                'fieldMapping': {
-                    'vectorField': 'bedrock-knowledge-base-default-vector',
-                    'textField': 'AMAZON_BEDROCK_TEXT_CHUNK',
-                    'metadataField': 'AMAZON_BEDROCK_METADATA'
-                }
-            }
-        }
+            'rdsConfiguration':
+            {
+                'credentialsSecretArn': os.getenv(
+                    'RDS_SECRET_ARN', 'arn:aws:secretsmanager:eu-west-2:851725385545:secret:LLManualsAurora-hfpK6Y'
+                ),
+                'databaseName': os.getenv('RDS_DB_NAME', 'llmanuals'),
+                'fieldMapping': {'metadataField': 'metadata',
+                                 'primaryKeyField': 'id',
+                                 'textField': 'chunks',
+                                 'vectorField': 'embedding'},
+                'resourceArn': os.getenv('RDS_DB_ARN', 'arn:aws:rds:eu-west-2:851725385545:cluster:llmanualsdev'),
+                'tableName': os.getenv('RDS_DB_TABLE_NAME', 'bedrock_integration.bedrock_kb')
+            },
+            'type': 'RDS'
+        },
     )
     kb_id = response['knowledgeBase']['knowledgeBaseId']
     wait_for_knowledge_operation(kb_id)
