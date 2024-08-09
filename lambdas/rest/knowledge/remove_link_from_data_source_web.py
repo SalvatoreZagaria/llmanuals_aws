@@ -26,6 +26,9 @@ def lambda_handler(event, context):
     if not body:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - no payload'})
         }
     body = json.loads(body)
@@ -33,6 +36,9 @@ def lambda_handler(event, context):
     if not (urls and isinstance(urls, list) and all([u and isinstance(u, str) for u in urls])):
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - invalid urls'})
         }
     urls = set(urls)
@@ -61,6 +67,9 @@ def lambda_handler(event, context):
     if not_found_urls:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {
                     'message': 'Bad request - urls not found in data source',
@@ -73,6 +82,9 @@ def lambda_handler(event, context):
     if not new_urls:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {
                     'message': 'Bad request - cannot remove all urls from data source. '
@@ -89,6 +101,9 @@ def lambda_handler(event, context):
         logger.warning(f'URLS: {json.dumps(new_urls)}')
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': f'Bad request - {e}'})
         }
@@ -100,6 +115,9 @@ def lambda_handler(event, context):
         logger.error(tb)
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': 'Unexpected error. Please contact the administrator.'})
         }

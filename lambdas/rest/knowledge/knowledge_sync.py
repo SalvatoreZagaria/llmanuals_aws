@@ -23,6 +23,9 @@ def lambda_handler(event, context):
         logger.error(f'Unhandled case - {event["resource"]}')
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Server error'})
         }
 
@@ -39,6 +42,9 @@ def lambda_handler(event, context):
     if not data_source_id:
         return {
             'statusCode': 404,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': f'No {source_kind} source data found. You need to create one first.'})
         }
 
@@ -66,6 +72,9 @@ def lambda_handler(event, context):
         if jobs_response['ingestionJobSummaries']:
             return {
                 'statusCode': 503,
+                'headers': {
+                    "Access-Control-Allow-Origin": "*"
+                },
                 'body': json.dumps({
                     'message': 'Another synchronization job is still ongoing.',
                     'statusLocation': '/api/admin/agent/status'
@@ -78,6 +87,9 @@ def lambda_handler(event, context):
         )
         return {
             'statusCode': 202,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({
                 'message': 'Synchronization job started.',
                 'statusLocation': '/api/admin/agent/status'
@@ -88,6 +100,9 @@ def lambda_handler(event, context):
         logger.error(tb)
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': 'Unexpected error. Please contact the administrator.'})
         }

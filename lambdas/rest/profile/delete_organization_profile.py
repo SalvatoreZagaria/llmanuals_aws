@@ -48,7 +48,7 @@ def lambda_handler(event, context):
     error = error or not success
 
     if error:
-        logger.warning(f'Skipping DynamoDB and Cognito cleanup due to previous errors - USER_ID: {user_id}')
+        logger.warning(f'Skipping DynamoDB cleanup due to previous errors - USER_ID: {user_id}')
         return
 
     table.delete_item(

@@ -26,6 +26,9 @@ def lambda_handler(event, context):
     if not body:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - no payload'})
         }
     body = json.loads(body)
@@ -34,6 +37,9 @@ def lambda_handler(event, context):
     if not (urls and isinstance(urls, list) and len(urls) <= 10 and all([u and isinstance(u, str) for u in urls])):
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - urls must be provided and it should be '
                                            'no longer than 10 elements'})
         }
@@ -52,6 +58,9 @@ def lambda_handler(event, context):
             if not create_data_source_if_not_exists:
                 return {
                     'statusCode': 404,
+                    'headers': {
+                        "Access-Control-Allow-Origin": "*"
+                    },
                     'body': json.dumps(
                         {'message': 'Web data source not found'})
                 }
@@ -73,6 +82,9 @@ def lambda_handler(event, context):
         logger.error(tb)
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': 'Unexpected error. Please contact the administrator.'})
         }

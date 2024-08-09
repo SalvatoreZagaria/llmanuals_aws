@@ -10,6 +10,9 @@ def lambda_handler(event, context):
     if not body:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - no payload'})
         }
     body = json.loads(body)
@@ -20,6 +23,9 @@ def lambda_handler(event, context):
                 3 <= len(organization_name) <= 100):
             return {
                 'statusCode': 400,
+                'headers': {
+                    "Access-Control-Allow-Origin": "*"
+                },
                 'body': json.dumps({'message': 'Bad request - organization_name must be a string between '
                                                '3 and 100 characters'})
             }
@@ -30,6 +36,9 @@ def lambda_handler(event, context):
                 len(organization_description) <= 1000):
             return {
                 'statusCode': 400,
+                'headers': {
+                    "Access-Control-Allow-Origin": "*"
+                },
                 'body': json.dumps({'message': 'Bad request - organization_description must be a string with maximum '
                                                'length of 1000 characters'})
             }
@@ -37,6 +46,9 @@ def lambda_handler(event, context):
     if not any((organization_name, organization_description)):
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - one of [organization_name, organization_description] '
                                            'required'})
         }
@@ -52,12 +64,18 @@ def lambda_handler(event, context):
     if status_response['statusCode'] != 200:
         return {
             'statusCode': status_response['statusCode'],
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': status_response['body']
         }
     status_body = json.loads(status_response['body'])
     if not status_body['agent']['isAgentReady']:
         return {
             'statusCode': 423,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({
                 'message': 'Agent is busy, try later',
                 'statusLocation': '/api/admin/agent/status'
@@ -66,6 +84,9 @@ def lambda_handler(event, context):
     if status_body['agent']['agentError']:
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({
                 'message': 'Agent is in error state. Please contact an administrator.'
             })
@@ -87,6 +108,9 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 202,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps({
             'message': 'Updating the agent',
             'statusLocation': '/api/admin/agent/status'

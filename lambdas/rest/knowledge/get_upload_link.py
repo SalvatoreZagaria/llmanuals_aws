@@ -20,6 +20,9 @@ def lambda_handler(event, context):
     if not is_valid_s3_key(filename):
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': 'Bad request - fileName query parameter required and should not contain special characters '
                             'such as [&$@=;/+:,?\x00-\x1F\x7F\{}^%`"[]~<>#|]'}
@@ -37,6 +40,9 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 200,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps(
             {
                 'presignedUrl': response,

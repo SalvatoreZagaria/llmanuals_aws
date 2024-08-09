@@ -32,6 +32,9 @@ def lambda_handler(event, context):
         objects.remove(prefix)
     return {
         'statusCode': 200,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps(
             {
                 'files': list(objects)

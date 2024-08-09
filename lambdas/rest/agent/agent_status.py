@@ -24,7 +24,12 @@ def lambda_handler(event, context):
         logger.error(f'User not found in DynamoDB - USER ID: {user_id}')
         return {
             'statusCode': 500,
-            'message': 'Unexpected error. Please contact the administrator.'
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
+            'body': json.dumps({
+                'message': 'Unexpected error. Please contact the administrator.'
+            })
         }
     user = response['Item']
     agent_id = user['agent_id']
@@ -39,7 +44,12 @@ def lambda_handler(event, context):
     except bedrock_client.exceptions.ResourceNotFoundException:
         return {
             'statusCode': 500,
-            'message': 'Agent not found. Please contact the administrator.'
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
+            'body': json.dumps({
+                'message': 'Agent not found. Please contact the administrator.'
+            })
         }
 
     agent_status = response['agent']['agentStatus']
@@ -68,11 +78,13 @@ def lambda_handler(event, context):
             data_sources[key]['status'] = 'NOT SYNCHRONISED'
         else:
             data_sources[key]['status'] = jobs_response['ingestionJobSummaries'][0]['status']
-            data_sources[key]['updatedAt'] = jobs_response['ingestionJobSummaries'][0]['updatedAt'].isoformat()
             data_sources[key]['stats'] = jobs_response['ingestionJobSummaries'][0]['statistics']
 
     return {
         'statusCode': 200,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps({
             'agent': {
                 'agentStatus': agent_status,

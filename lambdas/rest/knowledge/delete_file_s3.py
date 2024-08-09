@@ -11,6 +11,9 @@ def lambda_handler(event, context):
     if not body:
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - no payload'})
         }
     body = json.loads(body)
@@ -18,6 +21,9 @@ def lambda_handler(event, context):
     if not (file_names and isinstance(file_names, list) and all([f and isinstance(f, str) for f in file_names])):
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Bad request - invalid fileNames'})
         }
 
@@ -37,6 +43,9 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 200,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps(
             {
                 'deleted': [{'Key': d['Key']} for d in response.get('Deleted') or []],

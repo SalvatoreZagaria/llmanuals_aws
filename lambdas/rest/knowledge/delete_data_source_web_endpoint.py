@@ -21,6 +21,9 @@ def lambda_handler(event, context):
     if not data_source_id:
         return {
             'statusCode': 404,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Web data source not found'})
         }
 
@@ -33,6 +36,9 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 202,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps({
             'message': 'Deleting web data source',
             'statusLocation': '/api/admin/agent/status'

@@ -20,6 +20,9 @@ def lambda_handler(event, context):
         logger.error(f'Unhandled case - {event["resource"]}')
         return {
             'statusCode': 500,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': 'Server error'})
         }
 
@@ -44,6 +47,9 @@ def lambda_handler(event, context):
     if response['agentKnowledgeBase']['knowledgeBaseState'] == state:
         return {
             'statusCode': 409,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps({'message': f'Conflict: Knowledge base is already {state}'})
         }
 
@@ -62,5 +68,8 @@ def lambda_handler(event, context):
     )
 
     return {
-        'statusCode': 202
+        'statusCode': 202,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
     }

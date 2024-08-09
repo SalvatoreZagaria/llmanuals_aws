@@ -22,6 +22,9 @@ def lambda_handler(event, context):
 
     return {
         'statusCode': 202,
+        'headers': {
+            "Access-Control-Allow-Origin": "*"
+        },
         'body': json.dumps({
             'message': 'Deleting profile...',
         })
