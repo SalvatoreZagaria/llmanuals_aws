@@ -110,6 +110,11 @@
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+
+        .modal-dialog {
+            max-width: 70%;
+            margin: 1.75rem auto;
+        }
     </style>
 </head>
 <body>
@@ -134,7 +139,7 @@
             <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
                 <h2>Agent Status</h2>
                 <span>&nbsp&nbsp</span>
-                <button class="buttonload">
+                <button onclick="location.reload(true);" class="buttonload">
                   <i class="fa fa-refresh"></i> Refresh
                 </button>
             </div>
@@ -186,6 +191,10 @@
               </div>
               <textarea id="orgDescription" class="form-control"></textarea>
             </div>
+            <br>
+            <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
+                <button id="updateOrgButton" class="main-button" disabled>Update organization details</button>
+            </div>
         </section>
 
         <section>
@@ -193,20 +202,20 @@
                 <h2>Knowledge Management</h2>
             </div>
             <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
-                <button class="main-button" onclick="disableKnowledge()">Disable Knowledge</button>
+                <button id="disableKnowledge" class="main-button">Disable Knowledge</button>
                 <span>&nbsp&nbsp</span>
-                <button class="main-button" onclick="enableKnowledge()">Enable Knowledge</button>
+                <button id="enableKnowledge" class="main-button">Enable Knowledge</button>
             </div>
             <br>
             <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
                 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                     <div id="navbarSupportedContent">
                         <ul class="navbar-nav mr-auto">
-                          <li class="nav-item active">
-                            <a class="nav-link" href="#">Static</a>
+                          <li id="showStaticContainerLi" class="nav-item active">
+                            <a id="showStaticContainer" class="nav-link">Static</a>
                           </li>
-                          <li class="nav-item">
-                            <a class="nav-link" href="#">Web</a>
+                          <li id="showWebContainerLi" class="nav-item">
+                            <a id="showWebContainer" class="nav-link">Web</a>
                           </li>
                         </ul>
                     </div>
@@ -218,21 +227,69 @@
                     <p>Data source is unavailable</p>
                 </div>
                 <div id="staticContainer">
-                    <button class="main-button" onclick="syncStaticDataSource()">Sync</button>
+                    <button id="syncStaticDataSource" type="button" class="btn btn-primary">Sync</button>
                     <span>&nbsp&nbsp</span>
-                    <button class="main-button" onclick="showStaticFiles()">Show files</button>
-                    <span>&nbsp&nbsp</span>
-                    <button class="main-button" onclick="addFiles()">Add new files</button>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#staticModal">
+                      Show files
+                    </button>
                 </div>
                 <div id="webContainer" style="display: none">
-                    <button class="main-button" onclick="syncWebDataSource()">Sync</button>
+                    <button id="syncWebDataSource" type="button" class="btn btn-primary">Sync</button>
                     <span>&nbsp&nbsp</span>
-                    <button class="main-button" onclick="showWebLinks()">Show links</button>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#webModal">
+                      Show links
+                    </button>
                     <span>&nbsp&nbsp</span>
-                    <button class="main-button" onclick="deleteWebDataSource()">Delete Web Data Source</button>
+                    <button id="deleteWebDataSource" type="button" class="btn btn-primary">Delete web data source</button>
                 </div>
             </div>
         </section>
+    </div>
+
+    <div class="modal fade" id="staticModal" tabindex="-1" role="dialog" aria-labelledby="staticModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticModalLabel">Static files</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div id="staticFilesListContainer" class="modal-body">
+          </div>
+          <div class="input-group" style="padding: 1%;">
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="inputStaticFileUpload">
+                <label class="custom-file-label" for="inputStaticFileUpload">Choose file</label>
+              </div>
+              <div class="input-group-append">
+                <button class="btn btn-outline-secondary" id="uploadFile" type="button">Upload</button>
+              </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="webModal" tabindex="-1" role="dialog" aria-labelledby="webModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="webModalLabel">Links</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div id="staticWebListContainer" class="modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button id="updateWebLinksButton" type="button" class="btn btn-primary" disabled>Save changes</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="admin.js" type="module"></script>
