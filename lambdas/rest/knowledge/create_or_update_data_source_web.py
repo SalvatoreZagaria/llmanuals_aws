@@ -34,7 +34,7 @@ def lambda_handler(event, context):
     body = json.loads(body)
     urls = body.get('urls') or []
     create_data_source_if_not_exists = body.get('createDataSourceIfNotExists', True)
-    if not (urls and isinstance(urls, list) and len(urls) <= 10 and all([u and isinstance(u, str) for u in urls])):
+    if not (urls and isinstance(urls, list) and len(set(urls)) <= 10 and all([u and isinstance(u, str) for u in urls])):
         return {
             'statusCode': 400,
             'headers': {
@@ -43,6 +43,7 @@ def lambda_handler(event, context):
             'body': json.dumps({'message': 'Bad request - urls must be provided and it should be '
                                            'no longer than 10 elements'})
         }
+    urls = list(set(urls))
 
     response = table.get_item(
         Key={
@@ -67,13 +68,16 @@ def lambda_handler(event, context):
             data_source_id = create_data_source(user_id, kb_id, urls)
             store_data_source_info(user_id, data_source_id)
         else:
-            add_urls_to_data_source(user_id, kb_id, data_source_id, urls)
+            update_data_source_urls(user_id, kb_id, data_source_id, urls)
     except (bedrock_client.exceptions.ValidationException, UserError) as e:
         logger.warning(f'WEB DATA SOURCE - Validation exception for {user_id}')
         logger.warning(f'KNOWLEDGE BASE ID: {kb_id}')
         logger.warning(f'URLS: {json.dumps(urls)}')
         return {
             'statusCode': 400,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(
                 {'message': f'Bad request - {e}'})
         }
@@ -123,21 +127,7 @@ def create_data_source(user_id: str, kb_id: str, urls: t.List[str]):
     return response['dataSource']['dataSourceId']
 
 
-def add_urls_to_data_source(user_id: str, kb_id: str, data_source_id: str, urls: t.List[str]):
-    data_source = bedrock_client.get_data_source(
-        dataSourceId=data_source_id,
-        knowledgeBaseId=kb_id
-    )
-    current_urls = [
-        su['url'] for su in
-        data_source['dataSource']['dataSourceConfiguration']['webConfiguration']['sourceConfiguration']
-        ['urlConfiguration']['seedUrls']
-    ]
-
-    urls = list(set(urls + current_urls))
-    if len(urls) > 10:
-        raise UserError('Web data source can hold no more than 10 urls')
-
+def update_data_source_urls(user_id: str, kb_id: str, data_source_id: str, urls: t.List[str]):
     kwargs = get_kwargs(user_id, kb_id, urls)
     kwargs['dataSourceId'] = data_source_id
     bedrock_client.update_data_source(**kwargs)
