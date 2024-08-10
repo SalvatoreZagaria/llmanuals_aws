@@ -22,14 +22,13 @@ def lambda_handler(event, context):
         if continuation_token:
             kwargs['ContinuationToken'] = continuation_token
         response = s3_client.list_objects_v2(**kwargs)
-        objects.update({o['Key'] for o in response.get('Contents', [])})
+        objects.update({o['Key'].lstrip(prefix) for o in response.get('Contents', [])})
 
         if not response.get('IsTruncated'):
             break
         continuation_token = response.get('NextContinuationToken')
 
-    if prefix in objects:
-        objects.remove(prefix)
+    objects = [o for o in objects if o]
     return {
         'statusCode': 200,
         'headers': {
@@ -37,7 +36,7 @@ def lambda_handler(event, context):
         },
         'body': json.dumps(
             {
-                'files': list(objects)
+                'files': objects
             }
         )
     }
