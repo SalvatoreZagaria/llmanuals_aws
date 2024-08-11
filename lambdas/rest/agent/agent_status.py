@@ -54,17 +54,27 @@ def lambda_handler(event, context):
 
     agent_status = response['agent']['agentStatus']
 
-    kb_response = bedrock_client.get_agent_knowledge_base(
+    agent_kb_response = bedrock_client.get_agent_knowledge_base(
         agentId=agent_id,
         agentVersion=agent_version,
         knowledgeBaseId=knowledge_base_id
     )
+
+    kb_response = bedrock_client.get_knowledge_base(
+        knowledgeBaseId=knowledge_base_id
+    )
+    kb_status = kb_response['knowledgeBase']['status']
 
     data_sources = {}
     for key, ds in zip(('static', 'web'), ('data_source_s3', 'data_source_web_crawler')):
         if not user[ds]:
             continue
         data_sources[key] = {}
+        ds_response = bedrock_client.get_data_source(
+            dataSourceId=user[ds],
+            knowledgeBaseId=knowledge_base_id,
+        )
+        ds_status = ds_response['dataSource']['status']
         jobs_response = bedrock_client.list_ingestion_jobs(
             dataSourceId=user[ds],
             knowledgeBaseId=knowledge_base_id,
@@ -74,11 +84,22 @@ def lambda_handler(event, context):
                 'order': 'DESCENDING'
             }
         )
-        if not jobs_response['ingestionJobSummaries']:
-            data_sources[key]['status'] = 'NOT SYNCHRONISED'
+        data_sources[key]['status'] = ds_status
+        if ds_status in ('DELETING', 'DELETE_UNSUCCESSFUL'):
+            data_sources[key]['synchronization'] = {
+                'status': None,
+                'stats': {}
+            }
+        elif not jobs_response['ingestionJobSummaries']:
+            data_sources[key]['synchronization'] = {
+                'status': 'NOT SYNCHRONISED',
+                'stats': {}
+            }
         else:
-            data_sources[key]['status'] = jobs_response['ingestionJobSummaries'][0]['status']
-            data_sources[key]['stats'] = jobs_response['ingestionJobSummaries'][0]['statistics']
+            data_sources[key]['synchronization'] = {
+                'status': jobs_response['ingestionJobSummaries'][0]['status'],
+                'stats': jobs_response['ingestionJobSummaries'][0]['statistics']
+            }
 
     return {
         'statusCode': 200,
@@ -88,11 +109,14 @@ def lambda_handler(event, context):
         'body': json.dumps({
             'agent': {
                 'agentStatus': agent_status,
-                'isAgentReady': agent_status == 'PREPARED',
+                'isAgentReady': agent_status in ('PREPARED', 'NOT_PREPARED', 'DELETING', 'FAILED'),
                 'agentError': agent_status == 'FAILED'
             },
             'knowledge': {
-                'knowledgeBaseStatus': kb_response['agentKnowledgeBase']['knowledgeBaseState'],
+                'knowledgeBaseStatus': kb_status,
+                'knowledgeBaseState': agent_kb_response['agentKnowledgeBase']['knowledgeBaseState'],
+                'isKnowledgeReady': kb_status in ('ACTIVE', 'DELETING', 'FAILED', 'DELETE_UNSUCCESSFUL'),
+                'knowledgeError': kb_status in ('FAILED', 'DELETING', 'DELETE_UNSUCCESSFUL'),
                 'dataSources': data_sources
             }
         })
