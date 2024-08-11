@@ -2,50 +2,19 @@ const client_id = '1gninisvq5bhg0dj88i0dfuv55';
 const cognitoUrl = 'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_JUVPtjO37';
 export const apiUrl = 'https://yoimepyn0c.execute-api.eu-west-2.amazonaws.com/dev';
 
+export let idToken = localStorage.getItem('jwtIdToken');
 
-export async function customFetch(url, options = {}) {
-    let loader = document.getElementById('loaderWheel');
-    let loaderOverlay = document.getElementById('loaderOverlay');
-    loader.style.display = 'block';
-    loaderOverlay.style.display = 'flex';
-    let token = localStorage.getItem('jwtIdToken');
-    if (token) {
-        options.headers = {
-            ...options.headers,
-            'Authorization': token
-        };
-    } else {
-        await promptLogin();
-        token = localStorage.getItem('jwtIdToken');
-    }
-
-    let response = await originalFetch(url, options);
-
-    if (response.status === 401) {
-        const refreshToken = localStorage.getItem('jwtRefreshToken');
-        if (refreshToken) {
-            await refreshTokens(refreshToken);
-            token = localStorage.getItem('jwtIdToken');
-            if (!token) {
-                loader.style.display = "none";
-                loaderOverlay.style.display = 'none';
-                await promptLogin();
-                return Promise.reject('Token refresh failed');
-            }
-        } else {
-            loader.style.display = "none";
-            loaderOverlay.style.display = 'none';
-            await promptLogin();
-            return Promise.reject('No refresh token available');
-        }
-    }
-
-    loader.style.display = "none";
-    loaderOverlay.style.display = 'none';
-    return response;
+export function promptLogin() {
+    $('#loginModal').modal('show');
 }
 
-async function login(username, password) {
+export async function login() {
+    const email = document.getElementById('inputEmail').value;
+    const passw = document.getElementById('inputPassword').value;
+    if (!email || !passw) {
+        alert('Insert email and password.');
+        return
+    }
     const headers = {
         'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
         'Content-Type': 'application/x-amz-json-1.1'
@@ -71,14 +40,69 @@ async function login(username, password) {
         localStorage.setItem('jwtIdToken', json.AuthenticationResult.IdToken);
         localStorage.setItem('jwtAccessToken', json.AuthenticationResult.AccessToken);
         localStorage.setItem('jwtRefreshToken', json.AuthenticationResult.RefreshToken);
-        location.reload(true);
+        idToken = json.AuthenticationResult.IdToken;
     } catch (error) {
         console.error('Error:', error);
     }
+    $('#loginModal').modal('hide');
 }
 
 
-export async function refreshTokens(refresh_token) {
+export async function customFetch(url, options = {}, useLoader = true) {
+    if (useLoader) {
+        showLoader();
+    }
+
+    if (!idToken) {
+        let res = await refreshTokens();
+        if (!res) {
+            dismissLoader();
+            return Promise.reject('No refresh token available');
+        }
+    }
+
+    options.headers = {
+        ...options.headers,
+        'Authorization': idToken
+    };
+    try {
+        let response = await originalFetch(url, options);
+        if (response.status === 401) {
+            let res = await refreshTokens();
+            if (res) {
+                options.headers.Authorization = idToken;
+                response = await originalFetch(url, options);
+                dismissLoader();
+                return response;
+            } else {
+                dismissLoader();
+                return Promise.reject('No refresh token available');
+            }
+        }
+        dismissLoader();
+        return response;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+function showLoader() {
+    document.getElementById('loaderWheel').style.display = 'block';
+    document.getElementById('loaderOverlay').style.display = 'flex';
+}
+
+function dismissLoader() {
+    document.getElementById('loaderWheel').style.display = 'none';
+    document.getElementById('loaderOverlay').style.display = 'none';
+}
+
+
+export async function refreshTokens() {
+    const refreshToken = localStorage.getItem('jwtRefreshToken');
+    if (!refreshToken) {
+        promptLogin();
+        return false;
+    }
     const headers = {
         'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
         'Content-Type': 'application/x-amz-json-1.1'
@@ -88,7 +112,7 @@ export async function refreshTokens(refresh_token) {
         'ClientId': client_id,
         'AuthFlow': 'REFRESH_TOKEN',
         'AuthParameters': {
-            'REFRESH_TOKEN': refresh_token
+            'REFRESH_TOKEN': refreshToken
         }
     };
 
@@ -102,19 +126,13 @@ export async function refreshTokens(refresh_token) {
         let json = await response.json();
         localStorage.setItem('jwtIdToken', json.AuthenticationResult.IdToken);
         localStorage.setItem('jwtAccessToken', json.AuthenticationResult.AccessToken);
-        localStorage.setItem('jwtRefreshToken', json.AuthenticationResult.RefreshToken);
+        idToken = json.AuthenticationResult.IdToken;
         return true;
     } catch (error) {
         console.error('Error:', error);
+        promptLogin();
         return false;
     }
-}
-
-export async function promptLogin() {
-    var email = prompt('Please enter your email');
-    var password = prompt('Please enter your password');
-
-    await login(email, password);
 }
 
 export function overrideFetch() {

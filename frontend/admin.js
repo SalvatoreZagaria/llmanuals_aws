@@ -1,11 +1,18 @@
 import * as interceptor from "./interceptor.js";
 
-interceptor.overrideFetch();
 const apiUrl = interceptor.apiUrl;
 
 window.onload = async function() {
+    interceptor.overrideFetch();
+
     getAgentStatus();
     getOrganization();
+
+    var intervalId = window.setInterval(function() {
+        if (interceptor.idToken) {
+            getAgentStatus(false);
+        }
+    }, 10000);
 
     document.getElementById("showStaticContainer").addEventListener('click', function(e) {
         const staticContainer = document.getElementById('staticContainer');
@@ -88,25 +95,52 @@ window.onload = async function() {
         deleteWebDataSource();
     });
 
+    document.getElementById('sendLoginButton').addEventListener('click', async function() {
+        await interceptor.login();
+    });
+
+    document.getElementById('inputEmail').addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            await interceptor.login();
+            e.preventDefault();
+        }
+    });
+
+    document.getElementById('inputPassword').addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            await interceptor.login();
+            e.preventDefault();
+        }
+    });
+
 };
 
 
-async function getAgentStatus() {
-    const response = await fetch(`${apiUrl}/api/admin/agent/status`, { method: 'GET' });
-    const result = await response.json();
-
+function processAgentStatus(result) {
     document.getElementById('agent_status').innerText = result['agent']['agentStatus'];
-    document.getElementById('kb_status').innerText = result['knowledge']['knowledgeBaseStatus'];
+    document.getElementById('kb_status').innerText = `${result['knowledge']['knowledgeBaseStatus']} (${result['knowledge']['knowledgeBaseState']})`;
 
     let element_id;
+    let ds_status;
     for(let key in result['knowledge']['dataSources']){
         if (key == 'static') {
             element_id = 's3_status';
         } else if (key == 'web') {
             element_id = 'web_status';
         }
-        document.getElementById(element_id).innerText = result['knowledge']['dataSources'][key]['status'];
+        ds_status = result['knowledge']['dataSources'][key]['status']
+        if (result['knowledge']['dataSources'][key]['synchronization']['status']) {
+            ds_status = `${ds_status} (SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']})`
+        }
+        document.getElementById(element_id).innerText = ds_status;
     }
+}
+
+
+async function getAgentStatus(useLoader = true) {
+    const response = await fetch(`${apiUrl}/api/admin/agent/status`, { method: 'GET' }, useLoader);
+    const result = await response.json();
+    processAgentStatus(result);
 }
 
 async function getOrganization() {
@@ -233,6 +267,7 @@ async function updateWebLinks() {
             })
         }
     );
+    const result = await response.json();
     if (!response.ok) {
         window.alert(result.message);
         throw new Error(result.message);
@@ -308,7 +343,7 @@ function getUrlInput(text) {
     input.type = "text";
     input.value = text;
     input.setAttribute("data-web-data-source-url", true);
-    input.addEventListener('change', function(e) {
+    input.addEventListener('input', function(e) {
         document.getElementById('updateWebLinksButton').disabled = false;
     });
     const div2 = document.createElement("div");
