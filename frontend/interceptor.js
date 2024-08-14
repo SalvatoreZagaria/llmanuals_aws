@@ -24,8 +24,8 @@ export async function login() {
         'ClientId': client_id,
         'AuthFlow': 'USER_PASSWORD_AUTH',
         'AuthParameters': {
-            'USERNAME': username,
-            'PASSWORD': password
+            'USERNAME': email,
+            'PASSWORD': passw
         }
     };
 
