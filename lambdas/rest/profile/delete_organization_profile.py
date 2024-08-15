@@ -51,11 +51,12 @@ def lambda_handler(event, context):
         logger.warning(f'Skipping DynamoDB cleanup due to previous errors - USER_ID: {user_id}')
         return
 
-    table.delete_item(
-        Key={
-            'id': user_id
-        }
-    )
+    for tb in (table, dynamodb_client.Table('crawler_task')):
+        tb.delete_item(
+            Key={
+                'id': user_id
+            }
+        )
 
     logger.info(f'Profile deactivated and user environment cleaned - USER_ID: {user_id}')
 

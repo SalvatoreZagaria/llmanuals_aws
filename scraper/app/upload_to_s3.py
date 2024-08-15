@@ -1,5 +1,7 @@
 import os
 import asyncio
+import logging
+import traceback
 import typing as t
 from pathlib import Path
 
@@ -8,6 +10,10 @@ import aioboto3
 
 
 BUCKET_NAME = os.getenv('BUCKET_NAME', 'llmanuals-knowledge-source-web')
+INPUT_FOLDER = 'output'
+
+LOGGER = logging.getLogger()
+LOGGER.setLevel("INFO")
 
 
 async def upload_files(prefix: str, files: t.List[Path]):
@@ -16,7 +22,7 @@ async def upload_files(prefix: str, files: t.List[Path]):
     async def upload_file(f: Path):
         async with boto_session.client('s3', region_name=os.getenv('AWS_REGION', 'eu-west-2')) as s3:
             with open(f, 'rb') as f_bytes:
-                await s3.upload_fileobj(f_bytes, BUCKET_NAME, f'{prefix}/{f.name}')
+                await s3.upload_fileobj(f_bytes, BUCKET_NAME, f'{prefix}/{f.parent.name}/{f.name}')
 
     await asyncio.gather(*[upload_file(f) for f in files])
 
@@ -65,3 +71,25 @@ async def restore_backup(prefix):
     delete_folder(prefix)
     await copy_folder(f'{prefix}_backup', prefix)
     delete_folder(f'{prefix}_backup')
+
+
+async def main():
+    bucket_prefix = os.environ['USER_ID']
+    files = [f for f in Path(INPUT_FOLDER).rglob('*') if f.is_file()]
+    if not files:
+        LOGGER.warning('No url scraped. Aborting.')
+        return
+    LOGGER.info(f'Saving {len(files)} files into s3...')
+    try:
+        backup_folder = await make_backup(bucket_prefix)
+        delete_folder(bucket_prefix)
+        await upload_files(bucket_prefix, files)
+        delete_folder(backup_folder)
+    except:
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error('Restoring backup...')
+        await restore_backup(bucket_prefix)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())

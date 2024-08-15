@@ -4,7 +4,6 @@ import random
 import asyncio
 import hashlib
 import logging
-import traceback
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -14,10 +13,6 @@ from scrapy.linkextractors import LinkExtractor
 from bs4 import BeautifulSoup
 from tor_python_easy.tor_control_port_client import TorControlPortClient
 
-import s3_utils
-
-
-BASE_URL = None
 OUTPUT_FOLDER = 'output'
 
 LOGGER = logging.getLogger()
@@ -49,11 +44,13 @@ class TorSpider(scrapy.Spider):
     name = "TorSpider"
     proxy_url = 'http://localhost:8118'
 
-    def __init__(self, **kwargs):
+    def __init__(self, base_url, **kwargs):
         super().__init__(**kwargs)
-        self.parsed_link, self.base_url = build_clean_link(BASE_URL)
+        self.parsed_link, self.base_url = build_clean_link(base_url)
         self.visited = set()
-        self.output_folder = Path(OUTPUT_FOLDER)
+        self.base_folder = Path(OUTPUT_FOLDER)
+        self.base_folder.mkdir(exist_ok=True)
+        self.output_folder = Path(self.base_folder, hash_string(self.base_url))
         self.output_folder.mkdir(exist_ok=True)
         self.link_extractor = LinkExtractor(allow=rf'{self.base_url}.*')
 
@@ -65,7 +62,6 @@ class TorSpider(scrapy.Spider):
 
     def start_requests(self):
         LOGGER.info('Starting to scrape...')
-        self._set_new_ip()
         user_agent = random.choice(self.settings.get('USER_AGENT_LIST'))
         yield scrapy.Request(
             url=self.base_url, callback=self.html_response_parser, headers={'User-Agent': user_agent},
@@ -89,28 +85,12 @@ class TorSpider(scrapy.Spider):
                 clean_link = f'{self.parsed_link.scheme}://{self.parsed_link.netloc}{link}'
             if not clean_link.startswith(self.base_url) or clean_link in self.visited:
                 continue
+            self._set_new_ip()
             user_agent = random.choice(self.settings.get('USER_AGENT_LIST'))
             yield response.follow(
                 clean_link, callback=self.html_response_parser, headers={'User-Agent': user_agent},
                 meta={'proxy': self.proxy_url}
             )
-
-
-async def commit_into_s3(bucket_prefix):
-    files = [f for f in Path(OUTPUT_FOLDER).glob('*')]
-    if not files:
-        LOGGER.warning('No url scraped. Aborting.')
-        return
-    LOGGER.info(f'Saving {len(files)} files into s3...')
-    try:
-        backup_folder = await s3_utils.make_backup(bucket_prefix)
-        s3_utils.delete_folder(bucket_prefix)
-        await s3_utils.upload_files(bucket_prefix, files)
-        s3_utils.delete_folder(backup_folder)
-    except:
-        LOGGER.error(traceback.format_exc())
-        LOGGER.error('Restoring backup...')
-        await s3_utils.restore_backup(bucket_prefix)
 
 
 def crawl(base_url):
@@ -131,11 +111,8 @@ def crawl(base_url):
         'TWISTED_REACTOR': 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
     }
 
-    global BASE_URL
-    BASE_URL = base_url
-
     process = CrawlerProcess(settings)
-    process.crawl(TorSpider)
+    process.crawl(TorSpider, base_url)
     process.start()
 
 
@@ -146,12 +123,9 @@ if __name__ == '__main__':
     asyncio.set_event_loop(loop)
 
     parser = argparse.ArgumentParser(description="Web scraping tool")
-    parser.add_argument("url", help="Target url for scraping")
-    parser.add_argument("bucket_prefix", help="s3 bucket's location")
+    parser.add_argument("--url", help="Target url for scraping", required=True)
     args = parser.parse_args()
 
     base_url = args.url
-    bucket_prefix = args.bucket_prefix
 
     crawl(base_url)
-    asyncio.run(commit_into_s3(bucket_prefix))

@@ -9,10 +9,12 @@ logger = logging.getLogger()
 logger.setLevel("INFO")
 
 
+dynamodb_client = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
+
+
 def lambda_handler(event, context):
     user_id = event['requestContext']['authorizer']['claims']['sub']
 
-    dynamodb_client = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
     table = dynamodb_client.Table('user')
     try:
         response = table.get_item(
@@ -101,6 +103,9 @@ def lambda_handler(event, context):
                 'stats': jobs_response['ingestionJobSummaries'][0]['statistics']
             }
 
+        if key == 'web':
+            data_sources[key]['crawling'] = get_crawling_status(user_id)
+
     return {
         'statusCode': 200,
         'headers': {
@@ -115,9 +120,27 @@ def lambda_handler(event, context):
             'knowledge': {
                 'knowledgeBaseStatus': kb_status,
                 'knowledgeBaseState': agent_kb_response['agentKnowledgeBase']['knowledgeBaseState'],
-                'isKnowledgeReady': kb_status in ('ACTIVE', 'DELETING', 'FAILED', 'DELETE_UNSUCCESSFUL'),
+                'isKnowledgeReady': kb_status in ('ACTIVE', 'FAILED', 'DELETE_UNSUCCESSFUL'),
                 'knowledgeError': kb_status in ('FAILED', 'DELETING', 'DELETE_UNSUCCESSFUL'),
                 'dataSources': data_sources
             }
         })
     }
+
+
+def get_crawling_status(user_id):
+    table = dynamodb_client.Table('crawler_task')
+    try:
+        response = table.get_item(
+            Key={
+                'id': user_id
+            }
+        )
+    except dynamodb_client.exceptions.ResourceNotFoundException:
+        return {}
+
+    crawling_task = response['Item']
+    return {
+            'status': crawling_task['status'],
+            'stats': crawling_task['metadata']
+        }

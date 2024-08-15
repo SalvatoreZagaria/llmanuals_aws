@@ -29,6 +29,7 @@ def lambda_handler(event, context):
     agent_id = create_agent(user_id, org_name)
     kb_id = create_knowledge_base(user_id, agent_id)
     s3_data_source_id = create_s3_data_source(user_id, kb_id)
+    web_data_source_id = create_web_data_source(user_id, kb_id)
 
     lambda_client = boto3.client('lambda', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
     response = lambda_client.invoke(
@@ -43,7 +44,7 @@ def lambda_handler(event, context):
 
     logger.info('Storing info in DynamoDB...')
     dynamodb_client = boto3.client('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
-    dynamodb_client.put_item(       # TODO might want to create this first and then update it?
+    dynamodb_client.put_item(
         TableName='user',
         Item={
             'id': {'S': user_id},
@@ -54,7 +55,8 @@ def lambda_handler(event, context):
             'alias_id': {'S': alias_id},
             'knowledge_base': {'S': kb_id},
             'data_source_s3': {'S': s3_data_source_id},
-            'data_source_web_crawler': {'S': ''},
+            'data_source_web_crawler': {'S': web_data_source_id},
+            'data_source_web_urls': {'L': []}
         }
     )
 
@@ -129,20 +131,20 @@ def create_knowledge_base(user_id, agent_id):
     return kb_id
 
 
-def create_s3_data_source(user_id, kb_id):
+def create_data_source(user_id: str, kb_id: str, bucket_arn: str, name: str):
     kwargs = {
         'clientToken': user_id,
         'dataSourceConfiguration': {
             'type': 'S3',
             's3Configuration': {
-                'bucketArn': os.getenv('S3_BUCKET_ARN', 'arn:aws:s3:::llmanuals-knowledge-source'),
+                'bucketArn': bucket_arn,
                 'inclusionPrefixes': [
                     f'{user_id}/',
                 ]
             }
         },
         'knowledgeBaseId': kb_id,
-        'name': f'S3_{user_id}',
+        'name': name,
         'vectorIngestionConfiguration': {
             'chunkingConfiguration': {
                 'chunkingStrategy': 'FIXED_SIZE',
@@ -156,6 +158,20 @@ def create_s3_data_source(user_id, kb_id):
 
     response = bedrock_client.create_data_source(**kwargs)
     return response['dataSource']['dataSourceId']
+
+
+def create_s3_data_source(user_id, kb_id):
+    return create_data_source(
+        user_id, kb_id, os.getenv('S3_BUCKET_ARN', 'arn:aws:s3:::llmanuals-knowledge-source'),
+        f'S3_{user_id}'
+    )
+
+
+def create_web_data_source(user_id, kb_id):
+    return create_data_source(
+        user_id, kb_id, os.getenv('WEB_BUCKET_ARN', 'arn:aws:s3:::llmanuals-knowledge-source-web'),
+        f'WEB_{user_id}'
+    )
 
 
 def get_agent_status(agent_id: str):

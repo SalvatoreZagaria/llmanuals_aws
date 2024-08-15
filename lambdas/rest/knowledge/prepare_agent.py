@@ -53,6 +53,14 @@ def lambda_handler(event, context):
         )
         logger.info(f'Done in {time.time() - start}')
 
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'alias_id': alias_id,
+            'agent_version': agent_version
+        })
+    }
+
 
 def get_agent_status(agent_id: str):
     response = bedrock_client.get_agent(
