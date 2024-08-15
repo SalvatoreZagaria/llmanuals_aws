@@ -137,7 +137,10 @@ def get_crawling_status(user_id):
             }
         )
     except dynamodb_client.exceptions.ResourceNotFoundException:
-        return {}
+        return {
+            'status': 'NOT CRAWLED',
+            'stats': {}
+        }
 
     crawling_task = response['Item']
     return {

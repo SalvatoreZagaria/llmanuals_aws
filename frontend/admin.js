@@ -87,12 +87,13 @@ window.onload = async function() {
     document.getElementById('syncWebDataSource').addEventListener('click', function() {
         syncWebDataSource();
     });
+
     document.getElementById('syncStaticDataSource').addEventListener('click', function() {
         syncStaticDataSource();
     });
 
-    document.getElementById('deleteWebDataSource').addEventListener('click', function() {
-        deleteWebDataSource();
+    document.getElementById('startCrawl').addEventListener('click', function() {
+        startCrawl();
     });
 
     document.getElementById('sendLoginButton').addEventListener('click', async function() {
@@ -122,17 +123,17 @@ function processAgentStatus(result) {
 
     let element_id;
     let ds_status;
+    let sync;
     for(let key in result['knowledge']['dataSources']){
+        ds_status = result['knowledge']['dataSources'][key]['status']
         if (key == 'static') {
             element_id = 's3_status';
+            sync = `(SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']})`
         } else if (key == 'web') {
             element_id = 'web_status';
+            sync = `(SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']}) - CRAWL: ${result['knowledge']['dataSources']['web']['crawling']})`
         }
-        ds_status = result['knowledge']['dataSources'][key]['status']
-        if (result['knowledge']['dataSources'][key]['synchronization']['status']) {
-            ds_status = `${ds_status} (SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']})`
-        }
-        document.getElementById(element_id).innerText = ds_status;
+        document.getElementById(element_id).innerText = `${ds_status} ${sync}`;
     }
 }
 
@@ -275,11 +276,8 @@ async function updateWebLinks() {
     fillWebModal();
 }
 
-async function deleteWebDataSource() {
-    if (!confirm(`This action is irreversible and all your urls are going to be deleted. Are you sure?`)) {
-      return
-    }
-    const response = await fetch(`${apiUrl}/api/admin/knowledge/web/delete`, { method: 'DELETE' });
+async function startCrawl() {
+    const response = await fetch(`${apiUrl}/api/admin/knowledge/web/crawl`, { method: 'PUT' });
     if (!response.ok) {
         const result = await response.json();
         window.alert(result.message);
