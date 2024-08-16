@@ -44,8 +44,10 @@ class TorSpider(scrapy.Spider):
     name = "TorSpider"
     proxy_url = 'http://localhost:8118'
 
-    def __init__(self, base_url, **kwargs):
+    def __init__(self, base_url: str, stop_every: int = None, **kwargs):
         super().__init__(**kwargs)
+        self.request_count = 0
+        self.switch_ip_every = stop_every
         self.parsed_link, self.base_url = build_clean_link(base_url)
         self.visited = set()
         self.base_folder = Path(OUTPUT_FOLDER)
@@ -56,9 +58,17 @@ class TorSpider(scrapy.Spider):
 
         self.tor_control_port_client = TorControlPortClient('localhost', 9051)
 
-    def _set_new_ip(self, probability=.1):
-        if random.random() < probability:
-            self.tor_control_port_client.change_connection_ip(seconds_wait=1)
+    def _set_new_ip(self):
+        if self.switch_ip_every is None:
+            return
+        self.request_count += 1
+        if self.request_count != self.switch_ip_every:
+            return
+        self.crawler.engine.pause()
+        self.tor_control_port_client.change_connection_ip(seconds_wait=1)
+        LOGGER.info('IP switched')
+        self.request_count = 0
+        self.crawler.engine.unpause()
 
     def start_requests(self):
         LOGGER.info('Starting to scrape...')
@@ -78,6 +88,7 @@ class TorSpider(scrapy.Spider):
         with open(Path(self.output_folder, f'{file_name}.metadata.json'), 'w') as f:
             json.dump({"metadataAttributes": {"url": response.url}}, f, indent=4)
         self.visited.add(response.url)
+        self._set_new_ip()
 
         for link in self.link_extractor.extract_links(response):
             _, clean_link = build_clean_link(link.url)
@@ -85,7 +96,6 @@ class TorSpider(scrapy.Spider):
                 clean_link = f'{self.parsed_link.scheme}://{self.parsed_link.netloc}{link}'
             if not clean_link.startswith(self.base_url) or clean_link in self.visited:
                 continue
-            self._set_new_ip()
             user_agent = random.choice(self.settings.get('USER_AGENT_LIST'))
             yield response.follow(
                 clean_link, callback=self.html_response_parser, headers={'User-Agent': user_agent},
@@ -106,13 +116,14 @@ def crawl(base_url):
         'AUTOTHROTTLE_MAX_DELAY': 10,
         'AUTOTHROTTLE_TARGET_CONCURRENCY': 1.0,
         'AUTOTHROTTLE_DEBUG': False,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 16,
         'USER_AGENT_LIST': [ua for ua in Path('user_agents.txt').read_text().split('\n') if 'Mobile' not in ua],
         'LOG_LEVEL': 'INFO',
         'TWISTED_REACTOR': 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
     }
 
     process = CrawlerProcess(settings)
-    process.crawl(TorSpider, base_url)
+    process.crawl(TorSpider, base_url, 50)
     process.start()
 
 
