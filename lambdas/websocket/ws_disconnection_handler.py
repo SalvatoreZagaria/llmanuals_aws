@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     table = dynamodb.Table('connection')
     table.delete_item(
         Key={
-            'id': connection_id
+            'connection_id': connection_id
         }
     )
 
