@@ -23,11 +23,11 @@ def lambda_handler(event, context):
     try:
         response = task_table.get_item(
             Key={
-                'id': user_id
+                'user_id': user_id
             }
         )
-        is_task_running = not response['Item']['is_ended']
-    except dynamodb_client.exceptions.ResourceNotFoundException:
+        is_task_running = not response.get('Item', {}).get('is_ended', True)
+    except dynamodb_client.meta.client.exceptions.ResourceNotFoundException:
         is_task_running = False
 
     if is_task_running:
@@ -101,13 +101,13 @@ def lambda_handler(event, context):
 
         task_table.update_item(
             Key={
-                'id': user_id
+                'user_id': user_id
             },
             UpdateExpression="SET started_at = :started_at, is_ended = :is_ended, ended_at = :ended_at, "
-                             "metadata = :metadata, status = :status",
+                             "metadata = :metadata, task_status = :task_status",
             ExpressionAttributeValues={
                 ':started_at': datetime.now().isoformat(), ':is_ended': False,
-                ':ended_at': None, ':metadata': {}, ':status': 'RUNNING'
+                ':ended_at': None, ':metadata': {}, ':task_status': 'RUNNING'
             }
         )
 

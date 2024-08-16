@@ -63,6 +63,10 @@ window.onload = async function() {
 
     document.getElementById('updateOrgButton').disabled = true;
 
+    document.getElementById('deleteOrgButton').addEventListener('click', function(e) {
+        deleteProfile();
+    });
+
     document.getElementById('inputStaticFileUpload').addEventListener('change', function(event) {
         var fileName = event.target.files[0].name;
         var label = document.querySelector('label[for="inputStaticFileUpload"]');
@@ -131,7 +135,7 @@ function processAgentStatus(result) {
             sync = `(SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']})`
         } else if (key == 'web') {
             element_id = 'web_status';
-            sync = `(SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']}) - CRAWL: ${result['knowledge']['dataSources']['web']['crawling']})`
+            sync = `(SYNC: ${result['knowledge']['dataSources'][key]['synchronization']['status']} - CRAWL: ${result['knowledge']['dataSources']['web']['crawling']['status']})`
         }
         document.getElementById(element_id).innerText = `${ds_status} ${sync}`;
     }
@@ -268,7 +272,6 @@ async function updateWebLinks() {
             })
         }
     );
-    const result = await response.json();
     if (!response.ok) {
         window.alert(result.message);
         throw new Error(result.message);

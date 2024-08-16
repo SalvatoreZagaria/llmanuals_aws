@@ -40,7 +40,7 @@ def lambda_handler(event, context):
             'body': json.dumps({'message': 'Bad request - urls must be provided and it should be '
                                            'no longer than 10 elements'})
         }
-    urls = list(set(urls))
+    urls = set(urls)
 
     response = table.get_item(
         Key={
@@ -62,7 +62,7 @@ def lambda_handler(event, context):
         },
         UpdateExpression="SET data_source_web_urls = :urls",
         ExpressionAttributeValues={
-            ':urls': urls
+            ':urls': list(urls)
         }
     )
     return {

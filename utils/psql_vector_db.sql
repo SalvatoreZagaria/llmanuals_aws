@@ -43,7 +43,8 @@ CREATE TABLE bedrock_integration.bedrock_kb (
     id uuid NOT NULL,
     embedding public.vector(1024),
     chunks text,
-    metadata json
+    metadata json,
+    url text
 );
 
 

@@ -71,7 +71,7 @@ def lambda_handler(event, context):
                     'references': [
                         {
                             'text': r['content']['text'],
-                            'link': _transform_ref_link(r['location']['s3Location']['uri'])
+                            'link': _get_link_from_reference(r)
                         }
                         for r in (citation.get('retrievedReferences') or [])
                     ],
@@ -94,5 +94,8 @@ def lambda_handler(event, context):
             Data=json.dumps({'type': 'error', 'message': 'Unexpected error'}))
 
 
-def _transform_ref_link(s3_link: str) -> str:
-    return s3_link.replace(S3_LINK, S3_HTTPS_LINK)
+def _get_link_from_reference(r):
+    original_url = r.get('metadata', {}).get('url')
+    if original_url:
+        return original_url
+    return r['location']['s3Location']['uri'].replace(S3_LINK, S3_HTTPS_LINK)

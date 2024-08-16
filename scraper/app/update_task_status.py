@@ -26,11 +26,12 @@ def main(status):
     task_table = dynamodb_client.Table('crawler_task')
     task_table.update_item(
         Key={
-            'id': user_id
+            'user_id': user_id
         },
-        UpdateExpression="SET is_ended = :is_ended, ended_at = :ended_at, metadata = :metadata, status = :status",
+        UpdateExpression="SET is_ended = :is_ended, ended_at = :ended_at, metadata = :metadata, "
+                         "task_status = :task_status",
         ExpressionAttributeValues={
-            ':is_ended': True, ':ended_at': datetime.now().isoformat(), ':metadata': metadata, ':status': status
+            ':is_ended': True, ':ended_at': datetime.now().isoformat(), ':metadata': metadata, ':task_status': status
         }
     )
 
