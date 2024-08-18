@@ -1,0 +1,74 @@
+{
+  "Comment": "Scrape organization's URLs",
+  "StartAt": "StartScraperTasks",
+  "States": {
+    "StartScraperTasks": {
+      "Type": "Map",
+      "ToleratedFailurePercentage": 100,
+      "InputPath": "$",
+      "ItemsPath": "$.urls_tasks",
+      "MaxConcurrency": 10,
+      "Parameters": {
+        "ItemSelector": {
+          "Cluster.$": "$.cluster",
+          "TaskDefinition.$": "$.task_definition",
+          "ContainerName.$": "$.container_name",
+          "UserID.$": "$.user_id",
+          "Subnets.$": "$.subnets",
+          "SecurityGroups.$": "$.security_groups",
+          "CommandArgs.$": "$$.Map.Item.Value"
+        }
+      },
+      "Iterator": {
+        "StartAt": "RunScraperTask",
+        "States": {
+          "RunScraperTask": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::ecs:runTask.sync",
+            "Parameters": {
+              "LaunchType": "FARGATE",
+              "Cluster.$": "$.ItemSelector.Cluster",
+              "EnableExecuteCommand": true,
+              "TaskDefinition.$": "$.ItemSelector.TaskDefinition",
+              "Overrides": {
+                "ContainerOverrides": [
+                  {
+                    "Name.$": "$.ItemSelector.ContainerName",
+                    "Command.$": "$.ItemSelector.CommandArgs",
+                    "Environment": [
+                      {
+                        "Name": "USER_ID",
+                        "Value.$": "$.ItemSelector.UserID"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "NetworkConfiguration": {
+                "AwsvpcConfiguration": {
+                  "Subnets.$": "$.ItemSelector.Subnets",
+                  "SecurityGroups.$": "$.ItemSelector.SecurityGroups",
+                  "AssignPublicIp": "ENABLED"
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": "$.results",
+      "Next": "MarkTaskAsFinished"
+    },
+    "MarkTaskAsFinished": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-west-2:851725385545:function:mark_scraping_task_as_finished",
+      "Parameters": {
+        "ItemSelector": {
+          "UserID.$": "$.user_id",
+          "UrlsTasks.$": "$.urls_tasks"
+        }
+      },
+      "End": true
+    }
+  }
+}

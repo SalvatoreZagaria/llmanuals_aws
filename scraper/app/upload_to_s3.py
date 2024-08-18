@@ -22,7 +22,7 @@ async def upload_files(prefix: str, files: t.List[Path]):
     async def upload_file(f: Path):
         async with boto_session.client('s3', region_name=os.getenv('AWS_REGION', 'eu-west-2')) as s3:
             with open(f, 'rb') as f_bytes:
-                await s3.upload_fileobj(f_bytes, BUCKET_NAME, f'{prefix}/{f.parent.name}/{f.name}')
+                await s3.upload_fileobj(f_bytes, BUCKET_NAME, f'{prefix}/{f.name}')
 
     await asyncio.gather(*[upload_file(f) for f in files])
 
@@ -75,20 +75,25 @@ async def restore_backup(prefix):
 
 async def main():
     bucket_prefix = os.environ['USER_ID']
-    files = [f for f in Path(INPUT_FOLDER).rglob('*') if f.is_file()]
-    if not files:
-        LOGGER.warning('No url scraped. Aborting.')
-        return
-    LOGGER.info(f'Saving {len(files)} files into s3...')
-    try:
-        backup_folder = await make_backup(bucket_prefix)
-        delete_folder(bucket_prefix)
-        await upload_files(bucket_prefix, files)
-        delete_folder(backup_folder)
-    except:
-        LOGGER.error(traceback.format_exc())
-        LOGGER.error('Restoring backup...')
-        await restore_backup(bucket_prefix)
+
+    for folder in Path(INPUT_FOLDER).glob('*'):
+        if not folder.is_dir():
+            continue
+        files = [f for f in folder.glob('*') if f.is_file()]
+        if not files:
+            LOGGER.warning(f'No url scraped for {folder.name}')
+            continue
+        LOGGER.info(f'Saving {len(files)} files into s3...')
+        prefix = f'{bucket_prefix}/{folder.name}'
+        try:
+            backup_folder = await make_backup(prefix)
+            delete_folder(prefix)
+            await upload_files(prefix, files)
+            delete_folder(backup_folder)
+        except:
+            LOGGER.error(traceback.format_exc())
+            LOGGER.error(f'Restoring backup for {folder.name}...')
+            await restore_backup(prefix)
 
 
 if __name__ == '__main__':

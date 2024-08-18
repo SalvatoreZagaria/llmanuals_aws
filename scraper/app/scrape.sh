@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ $# -eq 0 ]
+if [ $# != 2 ]
   then
-    echo "No urls supplied"
+    echo "url and task_id needed"
     exit 1
 fi
 
@@ -11,35 +11,34 @@ if [[ -z "${USER_ID}" ]]; then
   exit 1
 fi
 echo "USER_ID: $USER_ID"
-
-# shellcheck disable=SC2317
-function scrape() {
-  # shellcheck disable=SC2048
-  for URL in $*
-  do
-    echo "Scraping $URL..."
-    /.venv/bin/python scrape.py --url "$URL"
-  done
-}
-export -f scrape
+URL="$1"
+TASK_ID="$2"
+echo "URL: $URL"
+echo "TASK_ID: $TASK_ID"
 
 service tor start
 service privoxy start
 
-timeout 10800 bash -c "USER_ID=$USER_ID scrape $*" # Stopping after 3 hours
+source /.venv/bin/activate
+
+python create_task_entry.py --task_id "$TASK_ID"
+
+timeout 10800 python scrape.py --url "$URL"   # Stopping after 3 hours
 EXIT_STATUS=$?
 if [ $EXIT_STATUS -eq 124 ]
 then
   STATUS='TIMEOUT'
 elif [ $EXIT_STATUS -eq 0 ]; then
   STATUS='SUCCEEDED'
-  /.venv/bin/python upload_to_s3.py
+  python upload_to_s3.py
 else
   STATUS='FAILED'
 fi
 echo "Status: $STATUS"
 
-/.venv/bin/python update_task_status.py --status "$STATUS"
+python update_task_status.py --status "$STATUS" --task_id "$TASK_ID"
+
+deactivate
 
 # shellcheck disable=SC2046
 kill -9 $(pidof tor)

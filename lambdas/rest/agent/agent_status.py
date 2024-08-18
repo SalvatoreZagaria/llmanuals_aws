@@ -12,8 +12,8 @@ dynamodb_client = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION',
 
 
 def lambda_handler(event, context):
-    user_id = event['requestContext']['authorizer']['claims']['sub']
-
+    # user_id = event['requestContext']['authorizer']['claims']['sub']
+    user_id = 'd6422294-2061-70c4-c499-cdd1536914c1'
     table = dynamodb_client.Table('user')
     try:
         response = table.get_item(
@@ -138,6 +138,16 @@ def lambda_handler(event, context):
     }
 
 
+def convert_decimals(obj):
+    if isinstance(obj, dict):
+        return {key: convert_decimals(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimals(element) for element in obj]
+    elif isinstance(obj, decimal.Decimal):
+        return int(obj)
+    return obj
+
+
 def get_crawling_status(user_id):
     table = dynamodb_client.Table('crawler_task')
     try:
@@ -160,6 +170,5 @@ def get_crawling_status(user_id):
     crawling_task = response['Item']
     return {
         'status': crawling_task['task_status'],
-        'stats': {k: int(v) if isinstance(v, decimal.Decimal) else v
-                  for k, v in crawling_task['metadata'].items()}
+        'stats': convert_decimals(crawling_task['metadata'])
     }
