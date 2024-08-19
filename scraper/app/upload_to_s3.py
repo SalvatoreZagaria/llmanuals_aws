@@ -47,7 +47,7 @@ async def copy_folder(src, dest):
         if continuation_token:
             kwargs['ContinuationToken'] = continuation_token
         response = s3_client.list_objects_v2(**kwargs)
-        await asyncio.gather(*[copy_obj(boto_session, item['Key'], dest + item['Key'].lstrip(src))
+        await asyncio.gather(*[copy_obj(boto_session, item['Key'], dest + '/' + item['Key'].lstrip(src))
                                for item in response.get('Contents') or []])
 
         if not response.get('IsTruncated'):

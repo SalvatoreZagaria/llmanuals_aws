@@ -83,6 +83,16 @@ export async function customFetch(url, options = {}, useLoader = true) {
         return response;
     } catch (e) {
         console.error(e);
+        let res = await refreshTokens();
+        if (res) {
+            options.headers.Authorization = idToken;
+            response = await originalFetch(url, options);
+            dismissLoader();
+            return response;
+        } else {
+            dismissLoader();
+            return Promise.reject('No refresh token available');
+        }
     }
 };
 
