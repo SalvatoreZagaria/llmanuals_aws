@@ -5,26 +5,22 @@ import boto3
 
 
 def lambda_handler(event, context):
-    user_id = event['requestContext']['authorizer']['claims']['sub']
+    user_id = event["requestContext"]["authorizer"]["claims"]["sub"]
 
-    dynamodb_client = boto3.resource('dynamodb', region_name=os.getenv('AWS_REGION', 'eu-west-2'))
-    table = dynamodb_client.Table('user')
-    response = table.get_item(
-        Key={
-            'id': user_id
-        }
+    dynamodb_client = boto3.resource(
+        "dynamodb", region_name=os.getenv("AWS_REGION", "eu-west-2")
     )
-    user_data = response['Item']
+    table = dynamodb_client.Table("user")
+    response = table.get_item(Key={"id": user_id})
+    user_data = response["Item"]
 
     return {
-        'statusCode': 200,
-        'headers': {
-            "Access-Control-Allow-Origin": "*"
-        },
-        'body': json.dumps(
+        "statusCode": 200,
+        "headers": {"Access-Control-Allow-Origin": "*"},
+        "body": json.dumps(
             {
-                'organizationName': user_data['organization_name'],
-                'organizationDescription': user_data['organization_description'],
+                "organizationName": user_data["organization_name"],
+                "organizationDescription": user_data["organization_description"],
             }
-        )
+        ),
     }
