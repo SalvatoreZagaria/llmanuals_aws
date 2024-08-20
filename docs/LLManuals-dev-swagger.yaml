@@ -7,6 +7,48 @@ basePath: "/dev"
 schemes:
 - "https"
 paths:
+  /api/admin/agent/query:
+    post:
+      parameters:
+        - in: body
+          required: true
+          name: prompt
+          schema:
+            type: string
+        - in: body
+          required: false
+          name: streamId
+          schema:
+            type: string
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/Empty"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+      security:
+        - LLManualsAuth: [ ]
+    options:
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "200 response"
+          schema:
+            $ref: "#/definitions/Empty"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+            Access-Control-Allow-Methods:
+              type: "string"
+            Access-Control-Allow-Headers:
+              type: "string"
   /api/admin/agent/status:
     get:
       produces:
