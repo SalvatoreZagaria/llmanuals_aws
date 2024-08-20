@@ -97,13 +97,17 @@ export async function customFetch(url, options = {}, useLoader = true) {
 };
 
 function showLoader() {
-    document.getElementById('loaderWheel').style.display = 'block';
-    document.getElementById('loaderOverlay').style.display = 'flex';
+    try {
+        document.getElementById('loaderWheel').style.display = 'block';
+        document.getElementById('loaderOverlay').style.display = 'flex';
+    } catch (e) {}
 }
 
 function dismissLoader() {
-    document.getElementById('loaderWheel').style.display = 'none';
+    try {
+        document.getElementById('loaderWheel').style.display = 'none';
     document.getElementById('loaderOverlay').style.display = 'none';
+    } catch (e) {}
 }
 
 

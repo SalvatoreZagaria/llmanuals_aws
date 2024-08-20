@@ -29,8 +29,8 @@
             background: #f9f9f9;
             min-height: 300px;
             max-height: 800px;
-            overflow-y: auto;
             white-space: normal;
+            width: 100%
         }
 
         .tooltip {
@@ -61,6 +61,19 @@
             max-width: 70%;
             margin: 1.75rem auto;
         }
+
+        .loader {
+          border: 16px solid purple;
+          border-top: 16px solid #6e62af;
+          border-radius: 50%;
+          width: 120px;
+          height: 120px;
+          animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -75,9 +88,6 @@
     </header>
 
     <div class="container content">
-        <div id="loaderOverlay" style="text-align: center; justify-content: center; align-items: center">
-            <div id="loaderWheel" class="loader" style="display: none;"></div>
-        </div>
         <div style="text-align: center;">
             <div class="input-group mb-3">
               <input id="prompt" type="text" class="form-control" aria-describedby="basic-addon2">
@@ -86,7 +96,12 @@
               </div>
             </div>
             <br>
-            <p id="response" class="text-center collapse"></p>
+            <div style="text-align: center; display: flex; justify-content: center; align-items: center;">
+                <div id="response" class="text-center collapse">
+                    <div id="loaderWheel" class="loader" style="display: none; margin: auto"></div>
+                    <div id="response_text" class="text-center">
+                </div>
+            </div>
         </div>
     </div>
 

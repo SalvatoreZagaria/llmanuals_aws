@@ -1,12 +1,10 @@
 import * as interceptor from "./interceptor.js";
 
-const websocketEndpoint = 'wss://rzdd5r57y7.execute-api.eu-west-2.amazonaws.com/dev';
-let websocket;
+const apiUrl = interceptor.apiUrl;
 
 window.onload = async function() {
     interceptor.overrideFetch();
     await interceptor.refreshTokens();
-    connect();
 
     document.getElementById('prompt').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -49,76 +47,54 @@ window.onload = async function() {
 
 
 function processAssistantMessage(data) {
-    data = JSON.parse(data);
-    if (data.type == 'start' || data.type == 'end') {
-        return ''
-    }
-    if (data.type == 'error') {
-        window.alert(data.message);
-        throw new Error(data.message);
-    }
-    if (data.type == 'message') {
-        let ret = data.message
-        for (const ref of data.references) {
-            ret = `${ret} <div class="tooltip"><a href="${ref.link}" target="_blank">source</a><span class="tooltiptext">"${ref.text}"</span></div>`
+    const responseDiv = document.getElementById('response_text');
+    let res = '';
+    for (const message of data.messages) {
+        if (message.type == 'error') {
+            window.alert(message.message);
+            throw new Error(message.message);
         }
-        return ret;
-    } else {
-        throw new Error('Unhandled case');
+        if (message.type == 'message') {
+            res += message.message
+            for (const ref of message.references) {
+                res += ` <div class="tooltip"><a href="${ref.link}" target="_blank">source</a><span class="tooltiptext">"${ref.text}"</span></div>`
+            }
+            res += '\n'
+        } else {
+            window.alert('Unhandled case');
+        }
     }
+    responseDiv.innerHTML = res;
 }
 
 
-function connect() {
-    let accessToken = localStorage.getItem('jwtAccessToken');
-    websocket = new WebSocket(websocketEndpoint + '?accessToken=' + accessToken);
-
-    websocket.onopen = function(event) {
-        console.log('Connected to WebSocket');
-    };
-
-    websocket.onclose = function(event) {
-        console.log('Disconnected from WebSocket');
-    };
-
-    websocket.onmessage = function(event) {
-        var responseDiv = document.getElementById('response');
-
-        responseDiv.innerHTML = responseDiv.innerHTML + processAssistantMessage(event.data);
-        console.log('Message received: ', event.data);
-    };
-
-    websocket.onerror = function(event) {
-        console.error('WebSocket error: ', event);
-    };
-}
-
-function disconnect() {
-    if (websocket) {
-        websocket.close();
-    }
-}
-
-function query() {
+async function query() {
     const prompt = document.getElementById('prompt').value;
     if (!prompt) {
         alert('No query!');
         return
     }
-    const responseDiv = document.getElementById('response');
 
-    const messagePayload = {
-        action: 'query',
-        prompt: prompt
-    };
+    document.getElementById('response').classList.remove('collapse');
+    document.getElementById('response_text').innerHTML = '';
+    document.getElementById('loaderWheel').style.display = '';
 
-    if (websocket && websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify(messagePayload));
-        console.log('Sent query request');
-        responseDiv.classList.remove('collapse');
-        responseDiv.innerHTML = '';
-    } else {
-        console.error('WebSocket is not connected');
-        displayMessage('WebSocket is not connected');
+    const response = await fetch(
+        `${apiUrl}/api/admin/agent/query`,
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                prompt: prompt
+            })
+        },
+        false
+    );
+
+    if (!response.ok) {
+        window.alert(result.message);
+        return
     }
+    const result = await response.json();
+    processAssistantMessage(result);
+    document.getElementById('loaderWheel').style.display = 'none';
 }
