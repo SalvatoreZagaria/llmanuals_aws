@@ -44,7 +44,7 @@ def lambda_handler(event, context):
     urls = user_data["data_source_web_urls"]
     if not urls:
         return {
-            "statusCode": 400,
+            "statusCode": 404,
             "headers": {"Access-Control-Allow-Origin": "*"},
             "body": json.dumps({"message": "No data source web URLs found."}),
         }
