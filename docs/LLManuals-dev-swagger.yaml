@@ -3,12 +3,13 @@ swagger: "2.0"
 info:
   version: "2024-08-16T12:47:00Z"
   title: "LLManuals"
-basePath: "/dev"
 schemes:
 - "https"
 paths:
   /api/admin/agent/query:
     post:
+      tags:
+        - agent
       parameters:
         - in: body
           required: true
@@ -26,13 +27,46 @@ paths:
         "200":
           description: "200 response"
           schema:
-            $ref: "#/definitions/Empty"
+            type: object
+            properties:
+              streamId:
+                type: string
+              prompt:
+                type: string
+              messages:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [ message, error ]
+                    message:
+                      type: string
+                    references:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          text:
+                            type: string
+                          link:
+                            type: string
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "400":
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
         - LLManualsAuth: [ ]
     options:
+      tags:
+        - agent
       consumes:
         - "application/json"
       produces:
@@ -51,19 +85,30 @@ paths:
               type: "string"
   /api/admin/agent/status:
     get:
+      tags:
+        - agent
       produces:
       - "application/json"
       responses:
         "200":
           description: "200 response"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/AgentStatus"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "Server error"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - agent
       consumes:
       - "application/json"
       produces:
@@ -82,20 +127,31 @@ paths:
               type: "string"
   /api/admin/knowledge/disable:
     post:
+      tags:
+        - knowledge
       operationId: "DisableKB"
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "202":
+          description: "Accepted"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "409":
+          description: "Already done"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -114,20 +170,31 @@ paths:
               type: "string"
   /api/admin/knowledge/enable:
     post:
+      tags:
+        - knowledge
       operationId: "EnableKB"
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "202":
+          description: "Accepted"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "409":
+          description: "Already done"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -146,6 +213,8 @@ paths:
               type: "string"
   /api/admin/knowledge/static/delete-file:
     delete:
+      tags:
+        - knowledge
       parameters:
         - name: "fileName"
           in: "query"
@@ -161,9 +230,18 @@ paths:
           headers:
             Access-Control-Allow-Origin:
               type: "string"
+        "400":
+          description: "fileName required"
+          schema:
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -182,6 +260,8 @@ paths:
               type: "string"
   /api/admin/knowledge/static/get-upload-link:
     get:
+      tags:
+        - knowledge
       parameters:
         - name: "fileName"
           in: "query"
@@ -193,13 +273,27 @@ paths:
         "200":
           description: "200 response"
           schema:
-            $ref: "#/definitions/Empty"
+            type: object
+            properties:
+              presignedUrl:
+                type: string
+              expiresIn:
+                type: integer
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "400":
+          description: "fileName required"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -218,19 +312,30 @@ paths:
               type: "string"
   /api/admin/knowledge/static/list:
     get:
+      tags:
+        - knowledge
       produces:
       - "application/json"
       responses:
         "200":
           description: "200 response"
           schema:
-            $ref: "#/definitions/Empty"
+            type: object
+            properties: 
+              files:
+                type: array
+                items: 
+                  properties: 
+                    file_name:
+                      type: string
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -249,19 +354,30 @@ paths:
               type: "string"
   /api/admin/knowledge/static/sync:
     put:
+      tags:
+        - knowledge
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "503":
+          description: "Resource is busy"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/MessageWStatusLocation"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "202":
+          description: "Accepted"
+          schema:
+            $ref: "#/definitions/MessageWStatusLocation"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -280,19 +396,37 @@ paths:
               type: "string"
   /api/admin/knowledge/web/crawl:
     put:
+      tags:
+        - knowledge
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "503":
+          description: "Resource is busy"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/MessageWStatusLocation"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "404":
+          description: "No URL found"
+          schema:
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "202":
+          description: "Accepted"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -311,19 +445,28 @@ paths:
               type: "string"
   /api/admin/knowledge/web/list:
     get:
+      tags:
+        - knowledge
       produces:
       - "application/json"
       responses:
         "200":
-          description: "200 response"
+          description: "200"
           schema:
-            $ref: "#/definitions/Empty"
+            properties:
+              urls:
+                type: array
+                properties:
+                  url:
+                    type: string
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -342,19 +485,30 @@ paths:
               type: "string"
   /api/admin/knowledge/web/sync:
     put:
+      tags:
+        - knowledge
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "503":
+          description: "Resource is busy"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/MessageWStatusLocation"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "202":
+          description: "Accepted"
+          schema:
+            $ref: "#/definitions/MessageWStatusLocation"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -373,6 +527,8 @@ paths:
               type: "string"
   /api/admin/knowledge/web/update:
     post:
+      tags:
+        - knowledge
       parameters:
         - in: body
           required: true
@@ -384,6 +540,13 @@ paths:
       produces:
       - "application/json"
       responses:
+        "400":
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
         "200":
           description: "200 response"
           schema:
@@ -391,6 +554,8 @@ paths:
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - knowledge
       consumes:
       - "application/json"
       produces:
@@ -409,19 +574,28 @@ paths:
               type: "string"
   /api/admin/organization:
     get:
+      tags:
+        - profile
       produces:
       - "application/json"
       responses:
         "200":
           description: "200 response"
           schema:
-            $ref: "#/definitions/Empty"
+            type: object
+            properties:
+              organizationName:
+                type: string
+              organizationDescription:
+                type: string
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - profile
       consumes:
       - "application/json"
       produces:
@@ -440,19 +614,23 @@ paths:
               type: "string"
   /api/admin/organization/delete-profile:
     delete:
+      tags:
+        - profile
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "202":
+          description: "Accepted"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - profile
       consumes:
       - "application/json"
       produces:
@@ -471,6 +649,8 @@ paths:
               type: "string"
   /api/admin/organization/update:
     post:
+      tags:
+        - profile
       parameters:
         - in: body
           required: true
@@ -486,16 +666,39 @@ paths:
       produces:
       - "application/json"
       responses:
-        "200":
-          description: "200 response"
+        "202":
+          description: "Accepted"
           schema:
-            $ref: "#/definitions/Empty"
+            $ref: "#/definitions/MessageWStatusLocation"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "400":
+          description: "Bad request"
+          schema:
+            $ref: "#/definitions/Message"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "423":
+          description: "Agent is busy"
+          schema:
+            $ref: "#/definitions/MessageWStatusLocation"
+          headers:
+            Access-Control-Allow-Origin:
+              type: "string"
+        "500":
+          description: "Server error"
+          schema:
+            $ref: "#/definitions/Message"
           headers:
             Access-Control-Allow-Origin:
               type: "string"
       security:
       - LLManualsAuth: []
     options:
+      tags:
+        - profile
       consumes:
       - "application/json"
       produces:
@@ -522,3 +725,72 @@ definitions:
   Empty:
     type: "object"
     title: "Empty Schema"
+  Message:
+    type: object
+    properties:
+      message:
+        type: string
+  MessageWStatusLocation:
+    type: object
+    properties:
+      message:
+        type: string
+      statusLocation:
+        type: string
+  AgentStatus:
+    type: object
+    properties:
+      agent:
+        type: object
+        properties:
+          agentStatus:
+            type: string
+          isAgentReady:
+            type: boolean
+          agentError:
+            type: boolean
+      knowledge:
+        type: object
+        properties:
+          knowledgeBaseStatus:
+            type: string
+          knowledgeBaseState:
+            type: string
+          isKnowledgeReady:
+            type: boolean
+          knowledgeError:
+            type: boolean
+          dataSources:
+            type: object
+            properties:
+              static:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  synchronization:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      stats:
+                        type: object
+              web:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  synchronization:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      stats:
+                        type: object
+                  crawling:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      stats:
+                        type: object
